@@ -23,7 +23,7 @@ root.geometry("500x350")
 root.resizable(False, False)
 root.configure()
 root.set_theme("black")
-mainFrame = ttk.Frame(root)
+mainFrame = ttk.Frame(root, style='Card.TFrame', padding=(5, 6, 7, 8))
 mainFrame.pack(pady=20)
 progressFrame = ttk.Frame(root)
 progressFrame.pack()
@@ -31,7 +31,7 @@ submitFrame = ttk.Frame(root)
 submitFrame.pack()
 # root.geometry("500x200")
 
-sv_ttk.set_theme("dark")
+sv_ttk.set_theme("light")
 # style = ttk.Style(root)
 # style.theme_use("default")
 
@@ -48,7 +48,7 @@ print(font.families())
 lblSelectCSV = ttk.Label(mainFrame, text="Select CSV:", padding=20, width=40)
 lblSelectFilePath = ttk.Label(mainFrame, text="Select Audio File Location:", padding=20, width=40)
 lblSelectImagePath = ttk.Label(mainFrame, text="Select Artwork:", padding=20, width=40)
-progressBar = ttk.Progressbar(progressFrame, orient=HORIZONTAL, length=410, mode='determinate', value=0)
+progressBar = ttk.Progressbar(progressFrame, orient=HORIZONTAL, length=440, mode='determinate', value=0)
 lblProgress = ttk.Label(progressFrame, text="0.00%", padding=20)
 
 csv_file = None
@@ -189,7 +189,7 @@ def stop_main():
 btnSelectCSV = ttk.Button(mainFrame, text="Browse", command=get_csv, padding=10)
 btnSelectFilePath = ttk.Button(mainFrame, text="Browse", command=get_audios, padding=10)
 btnSelectImagePath = ttk.Button(mainFrame, text="Browse", command=get_image, padding=10)
-btnProceed = ttk.Button(submitFrame, text="Proceed", command=start_main, padding=10)
+btnProceed = ttk.Button(submitFrame, text="Proceed", style='Accent.TButton', command=start_main, padding=10)
 btnStop = ttk.Button(submitFrame, text="Stop", command=stop_main, padding=10, state=DISABLED)
 
 # Arranging UI Elements to main window
@@ -202,6 +202,6 @@ btnSelectImagePath.grid(row=2, column=1)
 btnProceed.grid(row=3, column=0)
 btnStop.grid(row=3, column=1, padx=10)
 # lblProgress.grid(row=3, column=1)
-progressBar.grid(padx=54, pady=30)
+progressBar.grid(pady=30)
 
 root.mainloop()
