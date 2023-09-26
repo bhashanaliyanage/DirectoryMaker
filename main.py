@@ -1,20 +1,15 @@
-import os
 import csv
+import os
 import queue
 import shutil
 import threading
-import tkinter
-import ttkthemes
-from tkinter import *
-from tkinter import filedialog
+import tkinter as tk
+from tkinter import filedialog, HORIZONTAL, DISABLED, messagebox
 from tkinter import ttk, font
-from ttkthemes import ThemedTk
+import tkinter.simpledialog
 
 import sv_ttk
-
-# Styles
-# style = ttk.Style()
-# style.configure("Bold.TButton", font=("Sans", 10, "bold"))
+from ttkthemes import ThemedTk
 
 # Main Window
 root = ThemedTk()
@@ -29,13 +24,22 @@ progressFrame = ttk.Frame(root)
 progressFrame.pack()
 submitFrame = ttk.Frame(root)
 submitFrame.pack()
-# root.geometry("500x200")
+
+
+# File Picker
+class FilePickerWindow(tk.Toplevel):
+    def __init__(self):
+        super().__init__()
+        self.frame_main = ttk.Frame(self)
+        self.location = ttk.Entry(self.frame_main)
+        self.frame_main.pack(fill=tk.BOTH, expand=True)
+        self.location.pack()
+
 
 sv_ttk.set_theme("light")
-# style = ttk.Style(root)
-# style.theme_use("default")
 
 q = queue.Queue()
+error_messages = queue.Queue()
 
 # Define a global variable that stores the flag value
 global stop_flag
@@ -99,6 +103,13 @@ def update_gui():
     root.after(100, update_gui)
 
 
+def check_error_messages():
+    while not error_messages.empty():
+        error_message = error_messages.get()
+        messagebox.showerror(title='Error', message=error_message)
+    root.after(100, check_error_messages)
+
+
 def mfunc():
     global csv_file
     global audio_location
@@ -125,11 +136,11 @@ def mfunc():
 
     # Open CSV file and reading
     with open(csv_file) as csvfile:
-        btnSelectCSV.config(state=tkinter.DISABLED)
-        btnSelectFilePath.config(state=tkinter.DISABLED)
-        btnSelectImagePath.config(state=tkinter.DISABLED)
-        btnProceed.config(state=tkinter.DISABLED)
-        btnStop.config(state=tkinter.ACTIVE)
+        btnSelectCSV.config(state=tk.DISABLED)
+        btnSelectFilePath.config(state=tk.DISABLED)
+        btnSelectImagePath.config(state=tk.DISABLED)
+        btnProceed.config(state=tk.DISABLED)
+        btnStop.config(state=tk.ACTIVE)
         read_csv = csv.reader(csvfile, delimiter=',')
         next(read_csv)  # skip header row
         num_rows = 0
@@ -153,7 +164,14 @@ def mfunc():
             filename = row[55]
             src_file = os.path.join(audio_location, filename)
             dst_file = os.path.join(dir_name, filename)
-            shutil.copy(src_file, dst_file)
+            try:
+                shutil.copy(src_file, dst_file)
+            except FileNotFoundError as e:
+                error_message = f"File not found error: {e}"
+                # error_messages.put(error_message)
+                print(error_message)
+                file_picker_window = FilePickerWindow()
+
             dir_name_last = os.path.basename(dir_name)
             image_file_new = os.path.join(dir_name, dir_name_last + os.path.splitext(image_file)[1])
             shutil.copy(image_file, image_file_new)
@@ -163,11 +181,11 @@ def mfunc():
             q.put(progress)
             print("Copied " + filename + " to " + dir_name + "\n")
 
-    btnSelectCSV.config(state=tkinter.ACTIVE)
-    btnSelectFilePath.config(state=tkinter.ACTIVE)
-    btnSelectImagePath.config(state=tkinter.ACTIVE)
-    btnProceed.config(state=tkinter.ACTIVE)
-    btnStop.config(state=tkinter.DISABLED)
+    btnSelectCSV.config(state=tk.ACTIVE)
+    btnSelectFilePath.config(state=tk.ACTIVE)
+    btnSelectImagePath.config(state=tk.ACTIVE)
+    btnProceed.config(state=tk.ACTIVE)
+    btnStop.config(state=tk.DISABLED)
     print("Execution completed")
 
 
@@ -176,6 +194,7 @@ def start_main():
     t = threading.Thread(target=mfunc)
     t.start()
     update_gui()
+    check_error_messages()
 
 
 def stop_main():
@@ -201,7 +220,6 @@ btnSelectFilePath.grid(row=1, column=1)
 btnSelectImagePath.grid(row=2, column=1)
 btnProceed.grid(row=3, column=0)
 btnStop.grid(row=3, column=1, padx=10)
-# lblProgress.grid(row=3, column=1)
 progressBar.grid(pady=30)
 
 root.mainloop()
