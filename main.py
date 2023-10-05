@@ -13,7 +13,7 @@ from ttkthemes import ThemedTk
 
 # Main Window
 root = ThemedTk()
-root.title("Bulk Ingestion - Directory Maker")
+root.title("Bulk Ingestion - Directory Maker v1.2")
 root.geometry("500x350")
 root.resizable(False, False)
 root.configure()
