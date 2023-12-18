@@ -95,6 +95,18 @@ def get_image():
         lblSelectImagePath.config(text=first_3 + ".../" + last_40)
 
 
+def get_missing_file():
+    pass
+    # global image_file
+    # global lblSelectImagePath
+    # image_path = filedialog.askopenfilename(title="Select an image", filetypes=[("Image files", ".jpg .png .gif")])
+    # image_file = image_path
+    # if image_path != "":
+    #     last_40 = image_path[-35:]
+    #     first_3 = image_path[:3]
+    #     lblSelectImagePath.config(text=first_3 + ".../" + last_40)
+
+
 def update_gui():
     if not q.empty():
         progress = q.get()
@@ -164,13 +176,12 @@ def mfunc():
             filename = row[55]
             src_file = os.path.join(audio_location, filename)
             dst_file = os.path.join(dir_name, filename)
-            try:
+
+            if os.path.exists(src_file):
                 shutil.copy(src_file, dst_file)
-            except FileNotFoundError as e:
-                error_message = f"File not found error: {e}"
-                # error_messages.put(error_message)
-                print(error_message)
-                file_picker_window = FilePickerWindow()
+            else:
+                print(f"The file {src_file} does not exist.")
+                get_missing_file()  # Implement This
 
             dir_name_last = os.path.basename(dir_name)
             image_file_new = os.path.join(dir_name, dir_name_last + os.path.splitext(image_file)[1])
