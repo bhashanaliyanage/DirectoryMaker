@@ -71,10 +71,10 @@ def get_csv():
         print(file_name)
 
 
-def get_audios():
+def get_audios(name):
     global audio_location
     global lblSelectFilePath
-    folder_path = filedialog.askdirectory(title="Browse for audios")
+    folder_path = filedialog.askdirectory(title=name)
     audio_location = folder_path
     if folder_path != "":
         last_40 = folder_path[-35:]
@@ -93,18 +93,6 @@ def get_image():
         last_40 = image_path[-35:]
         first_3 = image_path[:3]
         lblSelectImagePath.config(text=first_3 + ".../" + last_40)
-
-
-def get_missing_file():
-    pass
-    # global image_file
-    # global lblSelectImagePath
-    # image_path = filedialog.askopenfilename(title="Select an image", filetypes=[("Image files", ".jpg .png .gif")])
-    # image_file = image_path
-    # if image_path != "":
-    #     last_40 = image_path[-35:]
-    #     first_3 = image_path[:3]
-    #     lblSelectImagePath.config(text=first_3 + ".../" + last_40)
 
 
 def update_gui():
@@ -175,13 +163,16 @@ def mfunc():
                 print("Executed Directory: " + dir_name)
             filename = row[55]
             src_file = os.path.join(audio_location, filename)
+            selected_file_name = os.path.basename(src_file)
             dst_file = os.path.join(dir_name, filename)
 
             if os.path.exists(src_file):
                 shutil.copy(src_file, dst_file)
             else:
                 print(f"The file {src_file} does not exist.")
-                get_missing_file()  # Implement This
+                get_audios(selected_file_name)  # Implement This
+                src_file = os.path.join(audio_location, filename)
+                shutil.copy(src_file, dst_file)
 
             dir_name_last = os.path.basename(dir_name)
             image_file_new = os.path.join(dir_name, dir_name_last + os.path.splitext(image_file)[1])
@@ -217,7 +208,7 @@ def stop_main():
 
 # Buttons
 btnSelectCSV = ttk.Button(mainFrame, text="Browse", command=get_csv, padding=10)
-btnSelectFilePath = ttk.Button(mainFrame, text="Browse", command=get_audios, padding=10)
+btnSelectFilePath = ttk.Button(mainFrame, text="Browse", command=lambda: get_audios("Browse for Audios"), padding=10)
 btnSelectImagePath = ttk.Button(mainFrame, text="Browse", command=get_image, padding=10)
 btnProceed = ttk.Button(submitFrame, text="Proceed", style='Accent.TButton', command=start_main, padding=10)
 btnStop = ttk.Button(submitFrame, text="Stop", command=stop_main, padding=10, state=DISABLED)
