@@ -42,7 +42,7 @@ lblSelectImagePath = ttk.Label(mainFrame, text="Select Artwork:", padding=20, wi
 progressBar = ttk.Progressbar(progressFrame, orient=HORIZONTAL, length=440, mode='determinate', value=0)
 lblProgress = ttk.Label(progressFrame, text="0.00%", padding=20)
 
-csv_file: os.PathLike
+csv_file = None
 audio_location: os.PathLike
 image_file = None
 image_file_location: os.PathLike
@@ -137,7 +137,7 @@ def main_func():
         return
 
     # Open CSV file and reading
-    with open(csv_file) as csv_document:
+    with open(csv_file, encoding='utf-8') as csv_document:
         disable_buttons()
 
         read_csv = csv.reader(csv_document, delimiter=',')
@@ -168,13 +168,12 @@ def main_func():
             selected_file_name = os.path.basename(src_file)
             dst_file = os.path.join(dir_name, filename)
 
-            if os.path.exists(src_file):
-                shutil.copy(src_file, dst_file)
-            else:
+            while not os.path.exists(src_file):
                 print(f"The file {src_file} does not exist.")
                 get_audios(selected_file_name)  # Implement This
                 src_file = os.path.join(audio_location, filename)
-                shutil.copy(src_file, dst_file)
+
+            shutil.copy(src_file, dst_file)
 
             dir_name_last = os.path.basename(dir_name)
             copy_image(dir_name, dir_name_last, image_file, image_name)
