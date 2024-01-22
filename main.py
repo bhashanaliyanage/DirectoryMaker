@@ -1,25 +1,20 @@
-import os
 import csv
+import glob
+import os
 import queue
 import shutil
 import threading
-import tkinter
-import ttkthemes
-from tkinter import *
-from tkinter import filedialog
-from tkinter import ttk, font
-from ttkthemes import ThemedTk
+import tkinter as tk
+from tkinter import filedialog, HORIZONTAL, DISABLED, messagebox
+from tkinter import ttk
 
 import sv_ttk
-
-# Styles
-# style = ttk.Style()
-# style.configure("Bold.TButton", font=("Sans", 10, "bold"))
+from ttkthemes import ThemedTk
 
 # Main Window
 root = ThemedTk()
-root.title("Bulk Ingestion - Directory Maker")
-root.geometry("500x350")
+root.title("Bulk Ingestion - Directory Maker v1.2")
+root.geometry("500x450")
 root.resizable(False, False)
 root.configure()
 root.set_theme("black")
@@ -29,20 +24,16 @@ progressFrame = ttk.Frame(root)
 progressFrame.pack()
 submitFrame = ttk.Frame(root)
 submitFrame.pack()
-# root.geometry("500x200")
 
 sv_ttk.set_theme("light")
-# style = ttk.Style(root)
-# style.theme_use("default")
 
 q = queue.Queue()
+error_messages = queue.Queue()
+r = tk.IntVar()
 
 # Define a global variable that stores the flag value
 global stop_flag
-# Initialize it to False
 stop_flag = False
-
-print(font.families())
 
 # Labels
 lblSelectCSV = ttk.Label(mainFrame, text="Select CSV:", padding=20, width=40)
@@ -52,8 +43,9 @@ progressBar = ttk.Progressbar(progressFrame, orient=HORIZONTAL, length=440, mode
 lblProgress = ttk.Label(progressFrame, text="0.00%", padding=20)
 
 csv_file = None
-audio_location = None
+audio_location: os.PathLike
 image_file = None
+image_file_location: os.PathLike
 
 
 def get_csv():
@@ -67,10 +59,10 @@ def get_csv():
         print(file_name)
 
 
-def get_audios():
+def get_audios(name):
     global audio_location
     global lblSelectFilePath
-    folder_path = filedialog.askdirectory(title="Browse for audios")
+    folder_path = filedialog.askdirectory(title=name)
     audio_location = folder_path
     if folder_path != "":
         last_40 = folder_path[-35:]
@@ -80,15 +72,21 @@ def get_audios():
         # lblSelectFilePath.config(text=folder_path)
 
 
-def get_image():
+def get_image(name):
     global image_file
     global lblSelectImagePath
-    image_path = filedialog.askopenfilename(title="Select an image", filetypes=[("Image files", ".jpg .png .gif")])
+    image_path = filedialog.askopenfilename(title=name, filetypes=[("Image files", ".jpg .png .gif")])
     image_file = image_path
     if image_path != "":
         last_40 = image_path[-35:]
         first_3 = image_path[:3]
         lblSelectImagePath.config(text=first_3 + ".../" + last_40)
+
+
+def get_image_location():
+    global image_file_location
+    folder_path = filedialog.askdirectory(title="Select Artwork Directory")
+    image_file_location = folder_path
 
 
 def update_gui():
@@ -99,15 +97,18 @@ def update_gui():
     root.after(100, update_gui)
 
 
-def mfunc():
-    global csv_file
-    global audio_location
-    global image_file
+def check_error_messages():
+    while not error_messages.empty():
+        error_message = error_messages.get()
+        messagebox.showerror(title='Error', message=error_message)
+    root.after(100, check_error_messages)
 
+
+def main_func():
     # check if csv_file is not empty
     if not csv_file:
         print("csv_file is empty")
-        btnSelectCSV.focus()
+        btn_select_csv.focus()
         lblSelectCSV.config(text="Select CSV: *required")
         return  # exit the function
 
@@ -117,26 +118,35 @@ def mfunc():
         lblSelectFilePath.config(text="Select Audio File Location: *required")
         return  # exit the function
 
-    # check if image_file is not empty
-    if not image_file:
-        print("image_file is empty")
-        lblSelectImagePath.config(text="Select Artwork: *required")
-        return  # exit the function
+    print(r.get())
+
+    if r.get() == 1:
+        # check if image_file is not empty
+        if not image_file:
+            print("image_file is empty")
+            btn_single_image.config(text="N/A")
+            return  # exit the function
+    elif r.get() == 2:
+        if not image_file_location:
+            print("Image File Location Empty")
+            btn_multiple_images.config(text="N/A")
+            return
+    else:
+        btn_single_image.config(text="N/A")
+        btn_multiple_images.config(text="N/A")
+        return
 
     # Open CSV file and reading
-    with open(csv_file) as csvfile:
-        btnSelectCSV.config(state=tkinter.DISABLED)
-        btnSelectFilePath.config(state=tkinter.DISABLED)
-        btnSelectImagePath.config(state=tkinter.DISABLED)
-        btnProceed.config(state=tkinter.DISABLED)
-        btnStop.config(state=tkinter.ACTIVE)
-        read_csv = csv.reader(csvfile, delimiter=',')
+    with open(csv_file, encoding='utf-8') as csv_document:
+        disable_buttons()
+
+        read_csv = csv.reader(csv_document, delimiter=',')
         next(read_csv)  # skip header row
         num_rows = 0
 
         for row in read_csv:
             num_rows += 1
-        csvfile.seek(0)
+        csv_document.seek(0)
         next(read_csv)  # skip header row
 
         # Iterating over rows in the CSV
@@ -144,7 +154,10 @@ def mfunc():
             if stop_flag:
                 # If it is True, break out of the loop and stop the function
                 break
+            # UPC
             dir_name = row[3]
+            # Catalog Number
+            image_name = row[4]
 
             # Making the directories
             if not os.path.exists(dir_name):
@@ -152,30 +165,68 @@ def mfunc():
                 print("Executed Directory: " + dir_name)
             filename = row[55]
             src_file = os.path.join(audio_location, filename)
+            selected_file_name = os.path.basename(src_file)
             dst_file = os.path.join(dir_name, filename)
+
+            while not os.path.exists(src_file):
+                print(f"The file {src_file} does not exist.")
+                get_audios(selected_file_name)  # Implement This
+                src_file = os.path.join(audio_location, filename)
+
             shutil.copy(src_file, dst_file)
+
             dir_name_last = os.path.basename(dir_name)
-            image_file_new = os.path.join(dir_name, dir_name_last + os.path.splitext(image_file)[1])
-            shutil.copy(image_file, image_file_new)
-            print(image_file + " | " + dir_name)
+            copy_image(dir_name, dir_name_last, image_file, image_name)
             progress = (i + 1) / num_rows * 100
             print(f"Progress: {progress:.2f}%")
             q.put(progress)
             print("Copied " + filename + " to " + dir_name + "\n")
 
-    btnSelectCSV.config(state=tkinter.ACTIVE)
-    btnSelectFilePath.config(state=tkinter.ACTIVE)
-    btnSelectImagePath.config(state=tkinter.ACTIVE)
-    btnProceed.config(state=tkinter.ACTIVE)
-    btnStop.config(state=tkinter.DISABLED)
+    enable_buttons()
     print("Execution completed")
+
+
+def copy_image(dir_name, dir_name_last, src_image, image_name):
+    if r.get() == 1:
+        image_file_new = os.path.join(dir_name, dir_name_last + os.path.splitext(src_image)[1])
+        shutil.copy(src_image, image_file_new)
+        print(src_image + " | " + dir_name)
+    if r.get() == 2:
+        image_file_new = glob.glob(os.path.join(image_file_location, f"{image_name}.*"))
+        if len(image_file_new) > 0:
+            print(f"{image_name} exists in {image_file_location}.")
+            extension = os.path.splitext(image_file_new[0])[1]
+            shutil.copy(image_file_new[0], os.path.join(dir_name, dir_name_last + extension))
+        else:
+            print(f"{image_name} does not exist in {image_file_location}.")
+            get_image(image_name)
+            image_file_new = os.path.join(dir_name, dir_name_last + os.path.splitext(image_file)[1])
+            shutil.copy(image_file, image_file_new)
+            print(image_file + " | " + dir_name)
+
+
+def enable_buttons():
+    btn_select_csv.config(state=tk.ACTIVE)
+    btn_select_file_path.config(state=tk.ACTIVE)
+    btn_single_image.config(state=tk.ACTIVE)
+    btn_proceed.config(state=tk.ACTIVE)
+    btn_stop.config(state=tk.DISABLED)
+
+
+def disable_buttons():
+    btn_select_csv.config(state=tk.DISABLED)
+    btn_select_file_path.config(state=tk.DISABLED)
+    btn_single_image.config(state=tk.DISABLED)
+    btn_proceed.config(state=tk.DISABLED)
+    btn_stop.config(state=tk.ACTIVE)
 
 
 def start_main():
     global t
-    t = threading.Thread(target=mfunc)
+    t = threading.Thread(target=main_func)
     t.start()
     update_gui()
+    check_error_messages()
 
 
 def stop_main():
@@ -186,22 +237,43 @@ def stop_main():
 
 
 # Buttons
-btnSelectCSV = ttk.Button(mainFrame, text="Browse", command=get_csv, padding=10)
-btnSelectFilePath = ttk.Button(mainFrame, text="Browse", command=get_audios, padding=10)
-btnSelectImagePath = ttk.Button(mainFrame, text="Browse", command=get_image, padding=10)
-btnProceed = ttk.Button(submitFrame, text="Proceed", style='Accent.TButton', command=start_main, padding=10)
-btnStop = ttk.Button(submitFrame, text="Stop", command=stop_main, padding=10, state=DISABLED)
+btn_select_csv = ttk.Button(mainFrame, text="Browse", command=get_csv, padding=10)
+btn_select_file_path = ttk.Button(mainFrame, text="Browse", command=lambda: get_audios("Browse for Audios"), padding=10)
+btn_single_image = ttk.Button(mainFrame, text="Browse", command=lambda: get_image("Browse for Image"), padding=10,
+                              state=DISABLED)
+btn_multiple_images = ttk.Button(mainFrame, text="Browse", command=get_image_location, padding=10, state=DISABLED)
+btn_proceed = ttk.Button(submitFrame, text="Proceed", style='Accent.TButton', command=start_main, padding=10)
+btn_stop = ttk.Button(submitFrame, text="Stop", command=stop_main, padding=10, state=DISABLED)
+
+
+def rb_clicked(value):
+    btn_single_image.config(state=tk.DISABLED)
+    btn_multiple_images.config(state=tk.DISABLED)
+    if value == 1:
+        btn_single_image.config(state=tk.ACTIVE)
+    else:
+        btn_multiple_images.config(state=tk.ACTIVE)
+
+
+# Radio Buttons
+rb_single = ttk.Radiobutton(mainFrame, text="Single Image", variable=r, value=1, padding=20,
+                            command=lambda: rb_clicked(r.get()))
+rb_multiple = ttk.Radiobutton(mainFrame, text="Multiple Images", variable=r, value=2, padding=20,
+                              command=lambda: rb_clicked(r.get()))
 
 # Arranging UI Elements to main window
 lblSelectCSV.grid(row=0, column=0, sticky="w")
 lblSelectFilePath.grid(row=1, column=0, sticky="w")
-lblSelectImagePath.grid(row=2, column=0, sticky="w")
-btnSelectCSV.grid(row=0, column=1)
-btnSelectFilePath.grid(row=1, column=1)
-btnSelectImagePath.grid(row=2, column=1)
-btnProceed.grid(row=3, column=0)
-btnStop.grid(row=3, column=1, padx=10)
-# lblProgress.grid(row=3, column=1)
+rb_single.grid(row=2, column=0, sticky="w")
+rb_multiple.grid(row=3, column=0, sticky="w")
+
+btn_select_csv.grid(row=0, column=1)
+btn_select_file_path.grid(row=1, column=1)
+btn_single_image.grid(row=2, column=1)
+btn_multiple_images.grid(row=3, column=1)
+
+btn_proceed.grid(row=3, column=0)
+btn_stop.grid(row=3, column=1, padx=10)
 progressBar.grid(pady=30)
 
 root.mainloop()
