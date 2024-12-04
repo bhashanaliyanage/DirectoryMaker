@@ -13,7 +13,7 @@ from ttkthemes import ThemedTk
 
 # Main Window
 root = ThemedTk()
-root.title("Bulk Ingestion - Directory Maker v1.2")
+root.title("Bulk Ingestion - Directory Maker v1.3")
 root.geometry("500x450")
 root.resizable(False, False)
 root.configure()
@@ -32,7 +32,6 @@ error_messages = queue.Queue()
 r = tk.IntVar()
 
 # Define a global variable that stores the flag value
-global stop_flag
 stop_flag = False
 
 # Labels
@@ -42,9 +41,9 @@ lblSelectImagePath = ttk.Label(mainFrame, text="Select Artwork:", padding=20, wi
 progressBar = ttk.Progressbar(progressFrame, orient=HORIZONTAL, length=440, mode='determinate', value=0)
 lblProgress = ttk.Label(progressFrame, text="0.00%", padding=20)
 
-csv_file = None
+csv_file: str
 audio_location: os.PathLike
-image_file = None
+image_file: str
 image_file_location: os.PathLike
 
 
@@ -163,14 +162,14 @@ def main_func():
             if not os.path.exists(dir_name):
                 os.makedirs(dir_name)
                 print("Executed Directory: " + dir_name)
-            filename = row[55]
+            filename = row[57]
             src_file = os.path.join(audio_location, filename)
             selected_file_name = os.path.basename(src_file)
             dst_file = os.path.join(dir_name, filename)
 
             while not os.path.exists(src_file):
                 print(f"The file {src_file} does not exist.")
-                get_audios(selected_file_name)  # Implement This
+                get_audios("Please locate audio: "+selected_file_name)  # Implement This
                 src_file = os.path.join(audio_location, filename)
 
             shutil.copy(src_file, dst_file)
@@ -186,7 +185,7 @@ def main_func():
     print("Execution completed")
 
 
-def copy_image(dir_name, dir_name_last, src_image, image_name):
+def copy_image(dir_name: str, dir_name_last: str, src_image: str, image_name: str):
     if r.get() == 1:
         image_file_new = os.path.join(dir_name, dir_name_last + os.path.splitext(src_image)[1])
         shutil.copy(src_image, image_file_new)
