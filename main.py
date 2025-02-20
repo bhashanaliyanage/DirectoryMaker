@@ -41,10 +41,10 @@ lblSelectImagePath = ttk.Label(mainFrame, text="Select Artwork:", padding=20, wi
 progressBar = ttk.Progressbar(progressFrame, orient=HORIZONTAL, length=440, mode='determinate', value=0)
 lblProgress = ttk.Label(progressFrame, text="0.00%", padding=20)
 
-csv_file: str
-audio_location: os.PathLike
-image_file: str
-image_file_location: os.PathLike
+csv_file: str = ""
+audio_location: os.PathLike = ""
+image_file: str = ""
+image_file_location: os.PathLike = ""
 
 
 def get_csv():
@@ -76,6 +76,7 @@ def get_image(name):
     global lblSelectImagePath
     image_path = filedialog.askopenfilename(title=name, filetypes=[("Image files", ".jpg .png .gif")])
     image_file = image_path
+    print("Image File Entered: ", image_file)
     if image_path != "":
         last_40 = image_path[-35:]
         first_3 = image_path[:3]
@@ -175,6 +176,12 @@ def main_func():
             shutil.copy(src_file, dst_file)
 
             dir_name_last = os.path.basename(dir_name)
+
+            print("Directory: ", dir_name)
+            print("DirNameLast: ", dir_name_last)
+            print("Image File: ", image_file)
+            print("Image Name: ", image_name)
+
             copy_image(dir_name, dir_name_last, image_file, image_name)
             progress = (i + 1) / num_rows * 100
             print(f"Progress: {progress:.2f}%")
